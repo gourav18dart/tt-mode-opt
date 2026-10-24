@@ -1,0 +1,151 @@
+{
+  "block_diagonal": {
+    "name": "Block-Diagonal Q (two 10x10 blocks)",
+    "N": 20,
+    "n_trials": 1000,
+    "natural_max": 7,
+    "natural_params": 3906,
+    "random": {
+      "avg_max_bond": 11.008,
+      "avg_params": 9399.492,
+      "min_params": 5526,
+      "max_params": 10206,
+      "counts": {
+        "8": 10,
+        "9": 50,
+        "10": 200,
+        "11": 402,
+        "12": 338
+      }
+    },
+    "methods": {
+      "1": {
+        "label": "Greedy (K=1, Paper Algorithm 3/4)",
+        "counts": {
+          "7": 1000
+        },
+        "opt_hits": 1000,
+        "opt_rate": 100.0,
+        "avg_params": 3906.0,
+        "min_params": 3906,
+        "reduction_percent": 58.44456274871025,
+        "total_time_sec": 5.170761823654175,
+        "ms_per_trial": 5.170761823654175
+      },
+      "2": {
+        "label": "Beam Search (K=2, Proposed)",
+        "counts": {
+          "7": 1000
+        },
+        "opt_hits": 1000,
+        "opt_rate": 100.0,
+        "avg_params": 3906.0,
+        "min_params": 3906,
+        "reduction_percent": 58.44456274871025,
+        "total_time_sec": 8.60733413696289,
+        "ms_per_trial": 8.60733413696289
+      },
+      "3": {
+        "label": "Beam Search (K=3, Proposed)",
+        "counts": {
+          "7": 1000
+        },
+        "opt_hits": 1000,
+        "opt_rate": 100.0,
+        "avg_params": 3906.0,
+        "min_params": 3906,
+        "reduction_percent": 58.44456274871025,
+        "total_time_sec": 11.976572275161743,
+        "ms_per_trial": 11.976572275161743
+      },
+      "5": {
+        "label": "Beam Search (K=5, Proposed)",
+        "counts": {
+          "7": 1000
+        },
+        "opt_hits": 1000,
+        "opt_rate": 100.0,
+        "avg_params": 3906.0,
+        "min_params": 3906,
+        "reduction_percent": 58.44456274871025,
+        "total_time_sec": 21.601457357406616,
+        "ms_per_trial": 21.601457357406616
+      }
+    }
+  },
+  "tridiagonal": {
+    "name": "Tridiagonal Q (N=20)",
+    "N": 20,
+    "n_trials": 1000,
+    "natural_max": 3,
+    "natural_params": 1512,
+    "random": {
+      "avg_max_bond": 9.506,
+      "avg_params": 7876.998,
+      "min_params": 4500,
+      "max_params": 10206,
+      "counts": {
+        "7": 21,
+        "8": 110,
+        "9": 359,
+        "10": 364,
+        "11": 144,
+        "12": 2
+      }
+    },
+    "methods": {
+      "1": {
+        "label": "Greedy (K=1, Paper Algorithm 3/4)",
+        "counts": {
+          "4": 1000
+        },
+        "opt_hits": 0,
+        "opt_rate": 0.0,
+        "avg_params": 2196.0,
+        "min_params": 2196,
+        "reduction_percent": 72.12135892379305,
+        "total_time_sec": 4.811756372451782,
+        "ms_per_trial": 4.811756372451782
+      },
+      "2": {
+        "label": "Beam Search (K=2, Proposed)",
+        "counts": {
+          "4": 1000
+        },
+        "opt_hits": 0,
+        "opt_rate": 0.0,
+        "avg_params": 2196.0,
+        "min_params": 2196,
+        "reduction_percent": 72.12135892379305,
+        "total_time_sec": 7.651566028594971,
+        "ms_per_trial": 7.651566028594971
+      },
+      "3": {
+        "label": "Beam Search (K=3, Proposed)",
+        "counts": {
+          "4": 1000
+        },
+        "opt_hits": 0,
+        "opt_rate": 0.0,
+        "avg_params": 1818.0,
+        "min_params": 1818,
+        "reduction_percent": 76.92014140412375,
+        "total_time_sec": 13.028831958770752,
+        "ms_per_trial": 13.028831958770752
+      },
+      "5": {
+        "label": "Beam Search (K=5, Proposed)",
+        "counts": {
+          "4": 1000
+        },
+        "opt_hits": 0,
+        "opt_rate": 0.0,
+        "avg_params": 1818.0,
+        "min_params": 1818,
+        "reduction_percent": 76.92014140412375,
+        "total_time_sec": 23.39300560951233,
+        "ms_per_trial": 23.39300560951233
+      }
+    }
+  }
+}

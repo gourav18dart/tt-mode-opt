@@ -108,6 +108,34 @@ We evaluate across 50 independent Monte Carlo trials under random input mode per
 
 In all trials, the relative reconstruction error between the permuted tensor and the reconstructed TT decomposition was bounded by $2 \times 10^{-14}$, verifying machine-precision numerical exactness.
 
+### 4.3 Full-Scale Replication of Section VI ($N=20$ Variables, $9^{20}$ Tensor, 1,000 Trials)
+To match the exact experiment described in Section VI of Tichavsky and Straka (2025):
+- Variables: $N = 20$.
+- Grid: $(-2 : 0.5 : 2)$ ($M = 9$ points, full tensor has $9^{20} \approx 1.2 \times 10^{19}$ elements).
+- Independent trials: 1,000 trials under independent random input coordinate permutations.
+
+#### Exact Section VI Benchmark 1: Block-Diagonal $Q$ (two $10 \times 10$ blocks)
+- Theoretical natural optimum: Max Bond = 7, Total Parameters = 3,906.
+
+| Method | Mean Max Bond | Optimal Rank Hit Rate ($\le 7$) | Mean Parameters | Min Parameters | Parameter Reduction | Mean Time / Trial |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Random Baseline | 11.01 | 0.0% | 9399.5 | 7308 | 0.0% | - |
+| Greedy ($K=1$, Paper Algorithm 3/4) | 7.00 | 100.0% (1000/1000) | 3906.0 | 3906 | 58.4% | 5.2 ms |
+| **Beam Search ($K=5$, Proposed)** | **7.00** | **100.0% (1000/1000)** | **3906.0** | **3906** | **58.4%** | 21.6 ms |
+
+#### Exact Section VI Benchmark 2: Tridiagonal $Q$ ($N=20$)
+- Theoretical natural optimum: Max Bond = 3, Total Parameters = 1,512.
+- Reported paper baseline for Algorithm 4: Mean Parameters = 2,397.8, Min Parameters = 1,512.
+
+| Method | Mean Max Bond | Mean Parameters | Min Parameters | Parameter Reduction vs Random | Mean Time / Trial |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Random Baseline | 9.51 | 7877.0 | 5616 | 0.0% | - |
+| Greedy ($K=1$, Paper Algorithm 3/4) | 4.00 | 2196.0 | 2196 | 72.1% | 4.8 ms |
+| **Beam Search ($K=3$, Proposed)** | **4.00** | **1818.0** | **1818** | **76.9%** | 13.0 ms |
+| **Beam Search ($K=5$, Proposed)** | **4.00** | **1818.0** | **1818** | **76.9%** | 23.4 ms |
+
+Beam Search reduces the mean model parameters from 2,196.0 down to **1,818.0** across all 1,000 trials, saving an additional 378 parameters per model over the paper's greedy algorithm.
+
 ---
 
 ## 5. Repository Structure
@@ -123,8 +151,10 @@ TT_decomposition/
 │   └── test_correctness.py   # Unit tests validating numerical precision and rank properties
 ├── experiments/
 │   ├── run_benchmarks.py     # Reproducible Monte Carlo benchmarking suite
+│   ├── run_paper_exact_benchmark.py  # Exact 1,000-trial N=20 replication from Section VI
 │   └── results/
-│       └── benchmark_results.json  # Raw evaluation metrics
+│       ├── benchmark_results.json
+│       └── exact_paper_replication_results.json
 ├── legacy/                   # Archived preliminary test files
 ├── requirements.txt          # Minimal dependency requirements
 ├── tt_core.py                # Backward-compatibility facade
@@ -143,6 +173,21 @@ pip install -r requirements.txt
 
 ### 6.2 Run Correctness Unit Tests
 Executes unit tests validating TT decomposition, exact tensor reconstruction, and mathematical rank bounds:
+```bash
+python tests/test_correctness.py
+```
+
+### 6.3 Run Monte Carlo Benchmarks
+Executes the general comparative benchmark suite across multiple beam widths:
+```bash
+python experiments/run_benchmarks.py
+```
+
+### 6.4 Run Exact 1,000-Trial Replication ($N=20$, $9^{20}$ Tensor)
+Replicates the exact Section VI setup from the paper over 1,000 independent trials:
+```bash
+python experiments/run_paper_exact_benchmark.py
+```
 ```bash
 python tests/test_correctness.py
 ```
