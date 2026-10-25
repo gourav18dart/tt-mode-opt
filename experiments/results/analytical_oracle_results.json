@@ -29,8 +29,8 @@
         "avg_params": 3906.0,
         "min_params": 3906,
         "reduction_percent": 58.44456274871025,
-        "total_time_sec": 5.170761823654175,
-        "ms_per_trial": 5.170761823654175
+        "total_time_sec": 4.1003029346466064,
+        "ms_per_trial": 4.1003029346466064
       },
       "2": {
         "label": "Beam Search (K=2, Proposed)",
@@ -42,8 +42,8 @@
         "avg_params": 3906.0,
         "min_params": 3906,
         "reduction_percent": 58.44456274871025,
-        "total_time_sec": 8.60733413696289,
-        "ms_per_trial": 8.60733413696289
+        "total_time_sec": 7.39109468460083,
+        "ms_per_trial": 7.39109468460083
       },
       "3": {
         "label": "Beam Search (K=3, Proposed)",
@@ -55,8 +55,8 @@
         "avg_params": 3906.0,
         "min_params": 3906,
         "reduction_percent": 58.44456274871025,
-        "total_time_sec": 11.976572275161743,
-        "ms_per_trial": 11.976572275161743
+        "total_time_sec": 10.731738567352295,
+        "ms_per_trial": 10.731738567352295
       },
       "5": {
         "label": "Beam Search (K=5, Proposed)",
@@ -68,8 +68,8 @@
         "avg_params": 3906.0,
         "min_params": 3906,
         "reduction_percent": 58.44456274871025,
-        "total_time_sec": 21.601457357406616,
-        "ms_per_trial": 21.601457357406616
+        "total_time_sec": 18.0279061794281,
+        "ms_per_trial": 18.0279061794281
       }
     }
   },
@@ -104,8 +104,8 @@
         "avg_params": 2196.0,
         "min_params": 2196,
         "reduction_percent": 72.12135892379305,
-        "total_time_sec": 4.811756372451782,
-        "ms_per_trial": 4.811756372451782
+        "total_time_sec": 4.2158448696136475,
+        "ms_per_trial": 4.2158448696136475
       },
       "2": {
         "label": "Beam Search (K=2, Proposed)",
@@ -117,8 +117,8 @@
         "avg_params": 2196.0,
         "min_params": 2196,
         "reduction_percent": 72.12135892379305,
-        "total_time_sec": 7.651566028594971,
-        "ms_per_trial": 7.651566028594971
+        "total_time_sec": 7.2989442348480225,
+        "ms_per_trial": 7.2989442348480225
       },
       "3": {
         "label": "Beam Search (K=3, Proposed)",
@@ -130,8 +130,8 @@
         "avg_params": 1818.0,
         "min_params": 1818,
         "reduction_percent": 76.92014140412375,
-        "total_time_sec": 13.028831958770752,
-        "ms_per_trial": 13.028831958770752
+        "total_time_sec": 10.857951402664185,
+        "ms_per_trial": 10.857951402664185
       },
       "5": {
         "label": "Beam Search (K=5, Proposed)",
@@ -143,8 +143,8 @@
         "avg_params": 1818.0,
         "min_params": 1818,
         "reduction_percent": 76.92014140412375,
-        "total_time_sec": 23.39300560951233,
-        "ms_per_trial": 23.39300560951233
+        "total_time_sec": 17.483443021774292,
+        "ms_per_trial": 17.483443021774292
       }
     }
   }

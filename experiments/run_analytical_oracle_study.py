@@ -256,7 +256,7 @@ def main():
     # Save exact results
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / "exact_paper_replication_results.json"
+    out_file = out_dir / "analytical_oracle_results.json"
     
     with open(out_file, "w") as f:
         json.dump({"block_diagonal": res_block, "tridiagonal": res_tri}, f, indent=2)

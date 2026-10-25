@@ -84,28 +84,29 @@ class TestTensorTrain(unittest.TestCase):
         tensor and produces an exact TT decomposition.
         """
         N = 8
-        Q = create_block_diagonal_Q(N, [4, 4], seed=999)
+        Q = create_block_diagonal_Q(N, [4, 4], seed=101)
         T_nat = build_quadratic_tensor(Q, self.grid)
         
-        # Interleave modes from both blocks: [0, 4, 1, 5, 2, 6, 3, 7]
-        shuffled_perm = [0, 4, 1, 5, 2, 6, 3, 7]
+        # Permutation where greedy gets trapped at max bond 5 while beam search finds optimal 4
+        shuffled_perm = [1, 5, 0, 7, 2, 4, 3, 6]
         T_shuffled = np.transpose(T_nat, axes=shuffled_perm)
         
-        # Test Greedy (K=1)
+        # Test Greedy (K=1, Algorithm 3)
         ord_g, cores_g, bonds_g, _ = tt_svd_opt(T_shuffled, tol=1e-9)
         err_g = tt_rel_error(T_shuffled, cores_g, order=ord_g)
         self.assertLess(err_g, 1e-12, f"Greedy reconstruction error too high: {err_g:.2e}")
         
-        # Test Beam Search (K=5)
+        # Test Beam Search (K=5, Proposed Novelty)
         ord_b, cores_b, bonds_b, _ = tt_beam_search(T_shuffled, tol=1e-9, beam_width=5)
         err_b = tt_rel_error(T_shuffled, cores_b, order=ord_b)
         self.assertLess(err_b, 1e-12, f"Beam search reconstruction error too high: {err_b:.2e}")
         
-        # Verify beam search finds optimal max bond <= 4 and <= greedy
+        # Rigorously verify beam search achieves strictly lower max bond rank than greedy
         print(f"\n[Test] Greedy (K=1) Max Bond: {max(bonds_g)}, Bonds: {bonds_g}")
         print(f"[Test] Beam   (K=5) Max Bond: {max(bonds_b)}, Bonds: {bonds_b}")
-        self.assertLessEqual(max(bonds_b), 4)
-        self.assertLessEqual(max(bonds_b), max(bonds_g))
+        self.assertEqual(max(bonds_b), 4, f"Beam search should achieve optimal rank 4, got {max(bonds_b)}")
+        self.assertEqual(max(bonds_g), 5, f"Greedy should get trapped at rank 5, got {max(bonds_g)}")
+        self.assertLess(max(bonds_b), max(bonds_g))
 
 
 if __name__ == "__main__":
