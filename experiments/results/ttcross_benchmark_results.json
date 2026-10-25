@@ -1,0 +1,26 @@
+{
+  "N": 8,
+  "n_trials": 5,
+  "natural_max": 4,
+  "natural_params": 594,
+  "algo4_paper": {
+    "counts": {
+      "5": 5
+    },
+    "opt_hits": 0,
+    "opt_rate": 0.0,
+    "avg_params": 846.0,
+    "min_params": 846,
+    "avg_time_sec": 3.235305738449097
+  },
+  "beam_search_ours": {
+    "counts": {
+      "4": 5
+    },
+    "opt_hits": 5,
+    "opt_rate": 100.0,
+    "avg_params": 594.0,
+    "min_params": 594,
+    "avg_time_sec": 6.912675523757935
+  }
+}

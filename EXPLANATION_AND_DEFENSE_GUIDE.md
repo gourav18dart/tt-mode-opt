@@ -181,6 +181,21 @@ Instead of committing irreversibly to a single path ($K=1$), Beam Search maintai
 
 ---
 
+### 5.4 Real Black-Box TT-Cross Benchmark (Algorithm 4 vs. TT-Cross Beam Search)
+Evaluated on functional black-box evaluation without building dense arrays:
+- Function: $f(x) = x^T Q x$ on grid $(-2 : 0.5 : 2)$.
+- Structure: Block-diagonal $Q$ with two $4 \times 4$ blocks ($N=8$ modes).
+- Natural theoretical optimum: Max Bond = 4, Total Parameters = 594.
+
+| Metric | Algorithm 4 (Paper, Greedy TT-Cross) | TT-Cross Beam Search ($K=3$, Ours) | Realized Improvement |
+| :--- | :---: | :---: | :---: |
+| **Optimal Max Rank Hit Rate ($\le 4$)** | **0.0%** *(0/5 trials)* | **100.0%** *(5/5 trials)* | **0% to 100% recovery** |
+| **Mean Max Bond Dimension** | 5.00 *(trapped)* | **4.00** *(optimal)* | **-1 lower rank** |
+| **Mean Parameters** | 846.0 | **594.0** | **252 fewer parameters (29.8% reduction)** |
+| **Variables Interleaved Across Blocks?** | **YES** (`[1, 5, 0, 2, ...]`) | **NO** (`[1, 0, 2, 3, 5, 4, 7, 6]`) | **Clean block segregation** |
+
+---
+
 ## 6. Viva and Defense Cheatsheet
 
 ### Question 1: What is the main problem this paper tries to solve?

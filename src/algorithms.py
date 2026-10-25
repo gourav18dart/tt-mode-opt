@@ -210,3 +210,134 @@ def tt_beam_search(tensor, tol=1e-10, beam_width=3):
     best = completed[0]
     
     return best['order'], best['cores'], best['bond_dims'], best['bond_vals']
+
+
+def _get_cross_tt(f_multi_index, shape, tol=1e-6, seed=123, nswp=5):
+    """
+    Internal helper to construct TT cores via cross-approximation.
+    """
+    import teneva
+    N = len(shape)
+    Y0 = teneva.rand(shape, r=2, seed=seed)
+    Y = teneva.cross(f_multi_index, Y0, e=tol, nswp=nswp)
+    return teneva.truncate(Y, e=tol)
+
+
+def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
+    """
+    Algorithm 4: Optimized TT-Cross Decomposition.
+    Faithful implementation of Algorithm 4 from Tichavsky & Straka (2025).
+    
+    Optimizes mode ordering for black-box or implicit functions evaluated on a grid
+    using TT-cross approximation and rank truncation.
+    
+    Parameters:
+        f_coords (callable): Function f(X) where X is a 2D array of coordinate values
+                             of shape (samples, N). Returns 1D array of function values.
+        N (int): Number of modes (variables).
+        grid (np.ndarray): 1D array of grid values for each coordinate.
+        initial_perm (list of int, optional): Starting mode permutation.
+        tol (float): Truncation tolerance.
+        seed (int): Random seed for TT-cross initialization.
+        
+    Returns:
+        best_order (list of int): Optimized mode ordering.
+        best_bonds (list of int): TT bond dimensions under optimized order.
+        final_tt (list of np.ndarray): Final TT cores.
+    """
+    import teneva
+    shape = [len(grid)] * N
+    order = list(range(N)) if initial_perm is None else list(initial_perm)
+    
+    def make_evaluator(curr_ord):
+        def f_multi_index(I):
+            X = np.zeros_like(I, dtype=float)
+            for k, var in enumerate(curr_ord):
+                X[:, var] = grid[I[:, k]]
+            return f_coords(X)
+        return f_multi_index
+        
+    F = _get_cross_tt(make_evaluator(order), shape, tol=tol, seed=seed)
+    
+    for i in range(N - 1):
+        b = teneva.ranks(F)[i + 1]
+        ord_curr = list(order)
+        for j in range(1, N - i + 1):
+            # Cyclic shift of remaining modes as in line 8 of Algorithm 4
+            cand_ord = ord_curr[:i] + ord_curr[i+1:] + [ord_curr[i]]
+            ord_curr = cand_ord
+            Fa = _get_cross_tt(make_evaluator(cand_ord), shape, tol=tol, seed=seed)
+            b2 = teneva.ranks(Fa)[i + 1]
+            if b2 < b:
+                F = Fa
+                order = list(cand_ord)
+                b = b2
+                
+    final_bonds = list(teneva.ranks(F)[1:-1])
+    return order, final_bonds, F
+
+
+def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol=1e-6, seed=123):
+    """
+    NOVELTY: Beam Search Mode Ordering for TT-Cross Decomposition.
+    
+    Extends Algorithm 4 from single-path greedy search (K=1) to Beam Search (K >= 2).
+    Evaluates candidate permutations using black-box TT-cross approximation and ranks
+    hypotheses by (max_rank_so_far, sum_rank_so_far).
+    
+    Parameters:
+        f_coords (callable): Black-box function f(X).
+        N (int): Number of modes.
+        grid (np.ndarray): 1D coordinate grid.
+        initial_perm (list of int, optional): Starting permutation.
+        beam_width (int): Beam width K.
+        tol (float): Truncation tolerance.
+        seed (int): Seed for TT-cross initialization.
+        
+    Returns:
+        best_order (list of int): Optimized mode ordering.
+        best_bonds (list of int): TT bond dimensions.
+        final_tt (list of np.ndarray): Final TT cores.
+    """
+    import teneva
+    shape = [len(grid)] * N
+    init_ord = list(range(N)) if initial_perm is None else list(initial_perm)
+    
+    def make_evaluator(curr_ord):
+        def f_multi_index(I):
+            X = np.zeros_like(I, dtype=float)
+            for k, var in enumerate(curr_ord):
+                X[:, var] = grid[I[:, k]]
+            return f_coords(X)
+        return f_multi_index
+        
+    beam = [(list(init_ord), (0, 0))]
+    
+    for i in range(N - 1):
+        candidates = []
+        for curr_order, _ in beam:
+            # Try placing each remaining candidate at position i
+            for j in range(i, N):
+                cand_order = list(curr_order)
+                cand_order[i], cand_order[j] = cand_order[j], cand_order[i]
+                Fa = _get_cross_tt(make_evaluator(cand_order), shape, tol=tol, seed=seed)
+                ranks = teneva.ranks(Fa)
+                max_so_far = int(max(ranks[1:i+2]))
+                sum_so_far = int(sum(ranks[1:i+2]))
+                candidates.append((cand_order, (max_so_far, sum_so_far)))
+                
+        candidates.sort(key=lambda x: x[1])
+        seen = set()
+        beam = []
+        for cand in candidates:
+            k = tuple(cand[0][:i+1])
+            if k not in seen:
+                seen.add(k)
+                beam.append(cand)
+                if len(beam) >= beam_width:
+                    break
+                    
+    best_order = beam[0][0]
+    final_tt = _get_cross_tt(make_evaluator(best_order), shape, tol=tol, seed=seed)
+    final_bonds = list(teneva.ranks(final_tt)[1:-1])
+    return best_order, final_bonds, final_tt

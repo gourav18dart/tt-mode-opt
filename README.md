@@ -138,6 +138,19 @@ $$r_k = \text{rank}(Q_{\pi(1:k), \pi(k+1:N)}) + 2$$
 
 Beam Search reduces the mean model parameters from 2,196.0 down to **1,818.0** across all 1,000 trials, saving an additional 378 parameters per model over the greedy oracle.
 
+### 4.4 Real TT-Cross Black-Box Benchmark (Algorithm 4 vs. Proposed TT-Cross Beam Search)
+To evaluate mode ordering on implicit functional tensors without forming full dense arrays, we implemented **Algorithm 4 (`tt_cross_opt`)** and its **Beam Search extension (`tt_cross_beam_search`)** using black-box cross-approximation (`teneva.cross`):
+- Function evaluated: $f(x) = x^T Q x$ on grid $(-2 : 0.5 : 2)$.
+- Structure: Block-diagonal $Q$ with two $4 \times 4$ blocks ($N=8$ modes).
+- Natural theoretical optimum: Max Bond = 4, Total Parameters = 594.
+
+| Method | Mean Max Bond | Optimal Rank Hit Rate ($\le 4$) | Mean Parameters | Min Parameters | Parameter Reduction | Mean Time / Trial |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Algorithm 4 (Paper, Greedy TT-Cross)** | 5.00 | **0.0%** (0/5) | 846.0 | 846 | 0.0% | 3.26 s |
+| **TT-Cross Beam Search ($K=3$, Proposed)** | **4.00** | **100.0%** (5/5) | **594.0** | **594** | **29.8%** | 7.11 s |
+
+**Key Finding**: On the exact black-box TT-cross pipeline, Algorithm 4 interleaves variables across the blocks and gets trapped at maximum bond dimension 5 in all trials. TT-Cross Beam Search ($K=3$) cleanly isolates the two blocks into `[1, 0, 2, 3]` and `[5, 4, 7, 6]`, achieving a **100.0% optimal rank recovery** and cutting parameters from 846.0 to 594.0.
+
 ---
 
 ## 5. Repository Structure
@@ -147,18 +160,20 @@ TT_decomposition/
 ├── src/
 │   ├── __init__.py           # Package exports
 │   ├── tt_core.py            # TT reconstruction, parameter counting, TT-rounding
-│   ├── algorithms.py         # Algorithm 1 (tt_svd), Algorithm 3 (tt_svd_opt), Novelty (tt_beam_search)
+│   ├── algorithms.py         # Algorithm 1 (tt_svd), Algorithm 3 (tt_svd_opt), Algorithm 4 (tt_cross_opt), and Beam Search variants
 │   └── models.py             # Quadratic form generators with explicit random seeds
 ├── tests/
-│   └── test_correctness.py   # Unit tests validating numerical precision, rank properties, and greedy-vs-beam gap
+│   └── test_correctness.py   # 5 automated unit tests validating TT-SVD, TT-rounding, Algorithm 3, and Algorithm 4 vs Beam Search
 ├── experiments/
 │   ├── run_benchmarks.py     # Full-tensor Monte Carlo benchmarking suite (N=8 dense arrays)
-│   ├── run_analytical_oracle_study.py  # Analytical rank oracle study (N=20, 1000 trials)
+│   ├── run_ttcross_benchmark.py       # Real black-box TT-cross benchmark (Algorithm 4 vs TT-Cross Beam Search)
+│   ├── run_analytical_oracle_study.py # Analytical rank oracle study (N=20, 1000 trials)
 │   └── results/
-│       ├── benchmark_results.json        # Committed raw results for N=8 full-tensor benchmarks
-│       └── analytical_oracle_results.json # Committed raw results for N=20 oracle study
+│       ├── benchmark_results.json         # Committed raw results for N=8 full-tensor benchmarks
+│       ├── ttcross_benchmark_results.json # Committed raw results for real TT-cross benchmark
+│       └── analytical_oracle_results.json  # Committed raw results for N=20 oracle study
 ├── legacy/                   # Archived preliminary test files
-├── requirements.txt          # Minimal dependency requirements
+├── requirements.txt          # Dependencies (numpy, scipy, teneva)
 ├── tt_core.py                # Backward-compatibility facade
 ├── EXPLANATION_AND_DEFENSE_GUIDE.md  # In-depth technical report and defense guide
 └── README.md
@@ -175,18 +190,24 @@ pip install -r requirements.txt
 ```
 
 ### 6.2 Run Correctness Unit Tests
-Executes unit tests validating TT decomposition, exact tensor reconstruction, mathematical rank bounds, and the empirical gap where Beam Search outperforms Greedy:
+Executes 5 automated unit tests validating TT decomposition, exact tensor reconstruction, Algorithm 3 vs Beam Search, and Algorithm 4 vs TT-Cross Beam Search:
 ```bash
 python tests/test_correctness.py
 ```
 
-### 6.3 Run Full-Tensor Monte Carlo Benchmarks ($N=8$)
+### 6.3 Run Real TT-Cross Benchmark (Algorithm 4 vs Beam Search)
+Executes the black-box cross-approximation benchmark:
+```bash
+python experiments/run_ttcross_benchmark.py
+```
+
+### 6.4 Run Full-Tensor Monte Carlo Benchmarks ($N=8$)
 Executes the dense full-tensor benchmark across 50 trials:
 ```bash
 python experiments/run_benchmarks.py
 ```
 
-### 6.4 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
+### 6.5 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
 Runs the $N=20$ mode-ordering oracle study across 1,000 independent trials:
 ```bash
 python experiments/run_analytical_oracle_study.py

@@ -108,6 +108,37 @@ class TestTensorTrain(unittest.TestCase):
         self.assertEqual(max(bonds_g), 5, f"Greedy should get trapped at rank 5, got {max(bonds_g)}")
         self.assertLess(max(bonds_b), max(bonds_g))
 
+    def test_tt_cross_algorithm4_vs_beam_search(self):
+        """
+        Verify that Algorithm 4 (Paper's TT-cross greedy heuristic) gets trapped
+        in a suboptimal mode order on black-box evaluation, while TT-Cross Beam Search
+        cleanly separates the blocks and achieves the optimal maximum rank.
+        """
+        from src.algorithms import tt_cross_opt, tt_cross_beam_search
+        N = 8
+        Q = create_block_diagonal_Q(N, [4, 4], seed=101)
+        grid = np.arange(-2, 2.01, 0.5)
+        
+        def f_coords(X):
+            return np.einsum('si,ij,sj->s', X, Q, X)
+            
+        shuffled_perm = [1, 5, 0, 7, 2, 4, 3, 6]
+        
+        # 1. Run Algorithm 4 (Paper's TT-cross greedy optimizer)
+        ord_algo4, bonds_algo4, _ = tt_cross_opt(f_coords, N, grid, initial_perm=shuffled_perm, tol=1e-6, seed=123)
+        
+        # 2. Run TT-Cross Beam Search (Proposed Novelty, K=3)
+        ord_beam, bonds_beam, _ = tt_cross_beam_search(f_coords, N, grid, initial_perm=shuffled_perm, beam_width=3, tol=1e-6, seed=123)
+        
+        print(f"\n[TT-Cross Test] Algorithm 4 (Paper) Final Order: {ord_algo4}, Bonds: {bonds_algo4}, Max: {max(bonds_algo4)}")
+        print(f"[TT-Cross Test] Beam Search (Ours)  Final Order: {ord_beam}, Bonds: {bonds_beam}, Max: {max(bonds_beam)}")
+        
+        # Algorithm 4 gets trapped at 5 due to interleaving
+        self.assertEqual(max(bonds_algo4), 5, f"Expected Algorithm 4 trapped at rank 5, got {max(bonds_algo4)}")
+        # Beam search achieves optimal rank 4
+        self.assertEqual(max(bonds_beam), 4, f"Expected Beam Search optimal rank 4, got {max(bonds_beam)}")
+        self.assertLess(max(bonds_beam), max(bonds_algo4))
+
 
 if __name__ == "__main__":
     unittest.main()

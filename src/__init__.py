@@ -1,6 +1,6 @@
 """
 Tensor Train Mode Optimization Package
-Implementing TT-SVD, Greedy Mode Ordering, and Beam Search Mode Ordering.
+Implementing TT-SVD, Greedy Mode Ordering, TT-Cross, and Beam Search Optimization.
 """
 
 from .tt_core import (
@@ -20,7 +20,9 @@ from .models import (
 from .algorithms import (
     tt_svd,
     tt_svd_opt,
-    tt_beam_search
+    tt_beam_search,
+    tt_cross_opt,
+    tt_cross_beam_search
 )
 
 __all__ = [
@@ -34,5 +36,7 @@ __all__ = [
     'create_random_Q',
     'tt_svd',
     'tt_svd_opt',
-    'tt_beam_search'
+    'tt_beam_search',
+    'tt_cross_opt',
+    'tt_cross_beam_search'
 ]
