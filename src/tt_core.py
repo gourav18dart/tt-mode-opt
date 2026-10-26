@@ -64,7 +64,7 @@ def tt_rel_error(tensor, cores, order=None):
 
 def tt_round(cores, tol=1e-10):
     """
-    Numerically stable TT-rounding (re-compression) of an existing TT.
+    Numerically stable TT-rounding (re-compression) of an existing TT (Algorithm 2).
     Performs right-to-left QR orthogonalization followed by left-to-right SVD.
     
     Parameters:
@@ -73,7 +73,8 @@ def tt_round(cores, tol=1e-10):
         
     Returns:
         new_cores (list of np.ndarray): Rounded TT cores with reduced bond dimensions.
-        bond_dims (list of int): New bond dimensions.
+        bond_dims (list of int): New bond dimensions r_i.
+        bond_vals (list of float): Discarded singular value norms v_i (tie-breaker in Alg 2/4).
     """
     N = len(cores)
     F = [c.copy() for c in cores]
@@ -95,6 +96,7 @@ def tt_round(cores, tol=1e-10):
     # Step 2: Left-to-right SVD truncation
     new_cores = []
     bond_dims = []
+    bond_vals = []
     r_prev = 1
     
     for i in range(N - 1):
@@ -102,16 +104,20 @@ def tt_round(cores, tol=1e-10):
         mat = F[i].reshape(r_prev * I_i, r_next)
         U, S, Vt = np.linalg.svd(mat, full_matrices=False)
         
-        r_i = int(np.sum(S > tol * S[0]))
+        cutoff = tol * S[0] if S[0] > 0 else tol
+        r_i = int(np.sum(S > cutoff))
         r_i = max(r_i, 1)
+        
+        v_i = float(np.linalg.norm(S[r_i:])) if r_i < len(S) else 0.0
         
         core = U[:, :r_i].reshape(r_prev, I_i, r_i)
         new_cores.append(core)
         bond_dims.append(r_i)
+        bond_vals.append(v_i)
         
         # Propagate S * Vt to next core
         F[i + 1] = np.tensordot(np.diag(S[:r_i]) @ Vt[:r_i, :], F[i + 1], axes=(1, 0))
         r_prev = r_i
         
     new_cores.append(F[-1].reshape(r_prev, F[-1].shape[1], 1))
-    return new_cores, bond_dims
+    return new_cores, bond_dims, bond_vals
