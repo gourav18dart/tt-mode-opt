@@ -108,7 +108,8 @@ def tt_round(cores, tol=1e-10):
         r_i = int(np.sum(S > cutoff))
         r_i = max(r_i, 1)
         
-        v_i = float(np.linalg.norm(S[r_i:])) if r_i < len(S) else 0.0
+        # Smallest retained singular value S(r_i, r_i) as defined in Section II/III of the paper
+        v_i = float(S[r_i - 1]) if r_i <= len(S) else 0.0
         
         core = U[:, :r_i].reshape(r_prev, I_i, r_i)
         new_cores.append(core)

@@ -212,27 +212,51 @@ def tt_beam_search(tensor, tol=1e-10, beam_width=3):
     return best['order'], best['cores'], best['bond_dims'], best['bond_vals']
 
 
+def get_canonical_bond_values(cores):
+    """
+    Computes gauge-independent bond values by orthogonalizing the TT format (Algorithm 2).
+    Right-to-left QR orthogonalization ensures that when sweeping left-to-right,
+    the singular values obtained at cut k are the exact singular values of the
+    global tensor unfolding matrix X_(k).
+    """
+    d = len(cores)
+    F = [c.copy() for c in cores]
+    # Right-to-left QR orthogonalization
+    for i in range(d - 1, 0, -1):
+        r1, n, r2 = F[i].shape
+        Q, R = np.linalg.qr(F[i].reshape(r1, n * r2).T)
+        F[i] = Q.T.reshape(-1, n, r2)
+        F[i - 1] = np.tensordot(F[i - 1], R.T, axes=(-1, 1))
+        
+    # Left-to-right SVD: singular values of the true global matricization
+    vals = []
+    r_prev = 1
+    for i in range(d - 1):
+        _, n, r2 = F[i].shape
+        mat = F[i].reshape(r_prev * n, r2)
+        U, S, Vt = np.linalg.svd(mat, full_matrices=False)
+        # In Algorithm 2/3, v_i is the smallest retained singular value S(r_i, r_i)
+        vals.append(float(S[-1]) if len(S) > 0 else 0.0)
+        F[i + 1] = np.tensordot(np.diag(S) @ Vt, F[i + 1], axes=(1, 0))
+        r_prev = len(S)
+        
+    return vals
+
+
 def _get_cross_tt(f_multi_index, shape, tol=1e-6, seed=123, nswp=5):
     """
     Internal helper to construct TT cores via cross-approximation and rank truncation.
     Returns:
         Y_tr (list of np.ndarray): Truncated TT cores.
         ranks (list of int): Bond dimensions [r_1, ..., r_{N-1}].
-        vals (list of float): Discarded singular value / cut energy proxy for tie-breaking.
+        vals (list of float): Canonical, gauge-invariant cut singular values (Algorithm 2).
     """
     import teneva
     Y0 = teneva.rand(shape, r=2, seed=seed)
     Y = teneva.cross(f_multi_index, Y0, e=tol, nswp=nswp)
     Y_tr = teneva.truncate(Y, e=tol)
     ranks = [int(r) for r in teneva.ranks(Y_tr)[1:-1]]
-    
-    # Compute bond values (smallest retained singular value / cut energy) as tie-breaker
-    vals = []
-    for k in range(len(Y_tr) - 1):
-        r1, n, r2 = Y_tr[k].shape
-        s = np.linalg.svd(Y_tr[k].reshape(r1 * n, r2), compute_uv=False)
-        vals.append(float(s[-1]) if len(s) > 0 else 0.0)
-        
+    vals = get_canonical_bond_values(Y_tr)
     return Y_tr, ranks, vals
 
 
@@ -293,9 +317,12 @@ def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
 def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol=1e-6, seed=123):
     """
     Beam Search Mode Ordering for TT-Cross Decomposition.
-    Extends Algorithm 4 from single-candidate greedy search (K=1) to Beam Search (K >= 2).
+    Generalizes Algorithm 4 (ttcrossopt):
+    - When beam_width == 1, exactly reproduces Algorithm 4.
+    - When beam_width >= 2, maintains top-K candidate orderings in parallel.
+    
     Evaluates candidate permutations using black-box TT-cross approximation and ranks
-    hypotheses by (max_rank_so_far, sum_rank_so_far, bond_val_so_far).
+    hypotheses by (max_rank_so_far, sum_rank_so_far, current_rank, current_canonical_bond_val).
     """
     shape = [len(grid)] * N
     init_ord = list(range(N)) if initial_perm is None else list(initial_perm)
@@ -308,31 +335,37 @@ def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol
             return f_coords(X)
         return f_multi_index
         
-    beam = [(list(init_ord), (0, 0, 0.0))]
+    F0, r0, v0 = _get_cross_tt(make_evaluator(init_ord), shape, tol=tol, seed=seed)
+    beam = [(list(init_ord), r0, v0, F0)]
     
     for i in range(N - 1):
         candidates = []
-        for curr_order, _ in beam:
-            for j in range(i, N):
-                cand_order = list(curr_order)
-                cand_order[i], cand_order[j] = cand_order[j], cand_order[i]
-                Fa, ra, va = _get_cross_tt(make_evaluator(cand_order), shape, tol=tol, seed=seed)
-                max_so_far = int(max(ra[:i+1]))
-                sum_so_far = int(sum(ra[:i+1]))
-                val_so_far = float(va[i])
-                candidates.append((cand_order, (max_so_far, sum_so_far, val_so_far)))
+        for curr_order, curr_r, curr_v, curr_F in beam:
+            orda = list(curr_order)
+            # Evaluate all cyclic shifts as in line 8 of Algorithm 4
+            for j in range(1, N - i + 1):
+                cand_ord = orda[:i] + orda[i+1:] + [orda[i]]
+                Fa, ra, va = _get_cross_tt(make_evaluator(cand_ord), shape, tol=tol, seed=seed)
+                if beam_width == 1:
+                    cost = (ra[i], va[i])
+                else:
+                    cost = (int(max(ra[:i+1])), int(sum(ra[:i+1])), ra[i], float(va[i]))
+                candidates.append((cand_ord, ra, va, Fa, cost))
+                orda = cand_ord
                 
-        candidates.sort(key=lambda x: x[1])
+        # Sort candidates lexicographically
+        candidates.sort(key=lambda x: x[4])
         seen = set()
         beam = []
         for cand in candidates:
             k = tuple(cand[0][:i+1])
             if k not in seen:
                 seen.add(k)
-                beam.append(cand)
+                beam.append((cand[0], cand[1], cand[2], cand[3]))
                 if len(beam) >= beam_width:
                     break
                     
     best_order = beam[0][0]
-    final_tt, final_bonds, _ = _get_cross_tt(make_evaluator(best_order), shape, tol=tol, seed=seed)
-    return best_order, list(final_bonds), final_tt
+    final_bonds = list(beam[0][1])
+    final_tt = beam[0][3]
+    return best_order, final_bonds, final_tt
