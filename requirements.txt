@@ -1,3 +1,4 @@
 numpy>=1.22.0
 scipy>=1.9.0
 teneva>=0.14.0
+ttpy @ git+https://github.com/oseledets/ttpy.git@0bd6622d9c425e6e98a2cd720c493e763225a4d6

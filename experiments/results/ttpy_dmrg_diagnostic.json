@@ -1,0 +1,276 @@
+{
+  "metadata": {
+    "experiment": "Focused TTpy DMRG-cross correctness and failure diagnosis",
+    "ttpy_version": "2.0.0rc3",
+    "N": 20,
+    "grid": [
+      -2.0,
+      -1.5,
+      -1.0,
+      -0.5,
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0
+    ],
+    "Q_seed": 42,
+    "Q_sha256": "3fc960178c8fc0c8bdd82ffb45425b539d3794ba6c351f28e0c8093d071440c4",
+    "tolerance": 0.0001,
+    "baseline_pivoting": 2,
+    "maximum_sweeps": 100,
+    "held_out_points": 1000
+  },
+  "small_exact_check": {
+    "converged": true,
+    "stop_reason": "eps",
+    "sweeps": 6,
+    "ranks": [
+      3,
+      4,
+      3
+    ],
+    "finite_cores": true,
+    "nonfinite_pivot_sweeps": [
+      4,
+      5,
+      6
+    ],
+    "held_out_relative_error": 5.502647687850904e-16,
+    "held_out_infinity_relative_error": 5.15477826970633e-16,
+    "warnings": [],
+    "exhaustive_relative_error": 5.369514673558242e-16,
+    "full_grid_points_checked": 6561,
+    "shape": [
+      9,
+      9,
+      9,
+      9
+    ]
+  },
+  "reproduced_failure": {
+    "found": true,
+    "trial_id": 1,
+    "candidate_decompositions": 77,
+    "failed_order": [
+      4,
+      5,
+      16,
+      10,
+      7,
+      0,
+      1,
+      11,
+      2,
+      3,
+      6,
+      13,
+      8,
+      18,
+      15,
+      14,
+      17,
+      12,
+      19,
+      9
+    ],
+    "baseline_seed": 3670752795,
+    "error": "FloatingPointError: TTpy DMRG-cross returned non-finite core values"
+  },
+  "controlled_failure_probes": [
+    {
+      "case": "baseline",
+      "eps": 0.0001,
+      "pivoting": 2,
+      "seed": 3670752795,
+      "converged": true,
+      "stop_reason": "eps",
+      "sweeps": 12,
+      "ranks": [
+        4,
+        5,
+        7,
+        7,
+        9,
+        9,
+        10,
+        11,
+        11,
+        9,
+        8,
+        9,
+        8,
+        9,
+        8,
+        6,
+        6,
+        5,
+        3
+      ],
+      "finite_cores": false,
+      "nonfinite_pivot_sweeps": [
+        10
+      ],
+      "held_out_relative_error": null,
+      "held_out_infinity_relative_error": null,
+      "warnings": [
+        "invalid value encountered in matmul",
+        "invalid value encountered in matmul"
+      ]
+    },
+    {
+      "case": "different_seed",
+      "eps": 0.0001,
+      "pivoting": 2,
+      "seed": 3670752796,
+      "converged": true,
+      "stop_reason": "eps",
+      "sweeps": 12,
+      "ranks": [
+        3,
+        4,
+        7,
+        7,
+        8,
+        8,
+        10,
+        10,
+        11,
+        9,
+        7,
+        9,
+        7,
+        9,
+        7,
+        6,
+        6,
+        5,
+        3
+      ],
+      "finite_cores": true,
+      "nonfinite_pivot_sweeps": [
+        10
+      ],
+      "held_out_relative_error": 2.0073886655893077e-14,
+      "held_out_infinity_relative_error": 2.688750019446594e-14,
+      "warnings": []
+    },
+    {
+      "case": "pivoting_zero",
+      "eps": 0.0001,
+      "pivoting": 0,
+      "seed": 3670752795,
+      "converged": true,
+      "stop_reason": "eps",
+      "sweeps": 20,
+      "ranks": [
+        3,
+        5,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        11,
+        10,
+        11,
+        11,
+        9,
+        10,
+        9,
+        8,
+        6,
+        5,
+        3
+      ],
+      "finite_cores": true,
+      "nonfinite_pivot_sweeps": [
+        13,
+        18
+      ],
+      "held_out_relative_error": 9.506985253211343e-14,
+      "held_out_infinity_relative_error": 1.7004092527289645e-13,
+      "warnings": []
+    },
+    {
+      "case": "pivoting_one",
+      "eps": 0.0001,
+      "pivoting": 1,
+      "seed": 3670752795,
+      "converged": true,
+      "stop_reason": "eps",
+      "sweeps": 12,
+      "ranks": [
+        3,
+        4,
+        5,
+        7,
+        7,
+        9,
+        10,
+        11,
+        10,
+        9,
+        8,
+        8,
+        7,
+        8,
+        7,
+        6,
+        6,
+        5,
+        3
+      ],
+      "finite_cores": true,
+      "nonfinite_pivot_sweeps": [
+        10
+      ],
+      "held_out_relative_error": 0.34125364065297165,
+      "held_out_infinity_relative_error": 0.47426661780139684,
+      "warnings": [
+        "held-out check contradicts the pivot criterion: measured relative error 4.743e-01 (inf-norm on 1000 points) against eps=1.0e-04"
+      ]
+    },
+    {
+      "case": "tighter_eps",
+      "eps": 1e-08,
+      "pivoting": 2,
+      "seed": 3670752795,
+      "converged": true,
+      "stop_reason": "eps",
+      "sweeps": 12,
+      "ranks": [
+        4,
+        5,
+        7,
+        7,
+        9,
+        9,
+        10,
+        11,
+        11,
+        9,
+        8,
+        9,
+        8,
+        9,
+        8,
+        6,
+        6,
+        5,
+        3
+      ],
+      "finite_cores": false,
+      "nonfinite_pivot_sweeps": [
+        10
+      ],
+      "held_out_relative_error": null,
+      "held_out_infinity_relative_error": null,
+      "warnings": [
+        "invalid value encountered in matmul",
+        "invalid value encountered in matmul"
+      ]
+    }
+  ]
+}

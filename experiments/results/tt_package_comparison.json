@@ -1,0 +1,82 @@
+{
+  "N": 8,
+  "n_trials": 5,
+  "beam_width": 3,
+  "tolerance": 1e-06,
+  "seed": 42,
+  "same_seed_and_initial_permutations": true,
+  "results_by_backend": {
+    "teneva": {
+      "backend": "teneva",
+      "backend_version": "0.14.11",
+      "N": 8,
+      "n_trials": 5,
+      "natural_max": 5,
+      "natural_params": 846,
+      "algo4_paper": {
+        "counts": {
+          "5": 5
+        },
+        "opt_hits": 5,
+        "opt_rate": 100.0,
+        "avg_params": 846.0,
+        "min_params": 846,
+        "avg_time_sec": 2.734575319290161
+      },
+      "beam_search_ours": {
+        "counts": {
+          "4": 5
+        },
+        "opt_hits": 5,
+        "opt_rate": 100.0,
+        "avg_params": 594.0,
+        "min_params": 594,
+        "avg_time_sec": 6.076923179626465
+      }
+    },
+    "ttpy": {
+      "backend": "ttpy",
+      "backend_version": "2.0.0rc3",
+      "N": 8,
+      "n_trials": 5,
+      "natural_max": 5,
+      "natural_params": 846,
+      "algo4_paper": {
+        "counts": {
+          "5": 5
+        },
+        "opt_hits": 5,
+        "opt_rate": 100.0,
+        "avg_params": 846.0,
+        "min_params": 846,
+        "avg_time_sec": 1.0626663208007812
+      },
+      "beam_search_ours": {
+        "counts": {
+          "4": 5
+        },
+        "opt_hits": 5,
+        "opt_rate": 100.0,
+        "avg_params": 594.0,
+        "min_params": 594,
+        "avg_time_sec": 2.494007682800293
+      }
+    }
+  },
+  "ttpy_minus_teneva": {
+    "algo4_paper": {
+      "optimal_rate_delta_percentage_points": 0.0,
+      "average_parameters_delta": 0.0,
+      "average_parameters_delta_percent": 0.0,
+      "average_time_delta_sec": -1.6719089984893798,
+      "average_time_delta_percent": -61.139621450374705
+    },
+    "beam_search_ours": {
+      "optimal_rate_delta_percentage_points": 0.0,
+      "average_parameters_delta": 0.0,
+      "average_parameters_delta_percent": 0.0,
+      "average_time_delta_sec": -3.5829154968261716,
+      "average_time_delta_percent": -58.95936793866803
+    }
+  }
+}

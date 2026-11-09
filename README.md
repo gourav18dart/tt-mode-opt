@@ -82,38 +82,61 @@ Instead of retaining only a single candidate path ($K=1$), Beam Search maintains
 
 ## 4. Empirical Evaluation
 
+For a consolidated comparison of all saved benchmark runs, rank-validation
+notes, presentation-ready conclusions, and anticipated Q&A, see
+[PRESENTATION_RESULTS_FAQ.md](./PRESENTATION_RESULTS_FAQ.md).
+
 ### 4.1 100-Trial Python/Teneva TT-Cross Benchmark ($N=20$)
 
-> **Core Finding**: In our 100-trial Python/Teneva TT-cross experiment on independently generated $N=20$ block-diagonal quadratic forms, beam search improved optimal-rank recovery from 74% to 82% relative to our greedy baseline, but had three regressions and one rank-11 outcome. This is evidence for the heuristic, not a direct reproduction of the paper's Table I.
+> **Qualified finding**: In the paired 100-trial varying-Q experiment, exact cut-rank re-evaluation found 13 beam wins, 84 ties, and 3 losses for maximum bond rank (paired sign test on non-ties: $p=0.021$). The mean rank difference was small, and its 95% confidence interval includes zero. This is evidence on this sampled problem family, not proof of universal superiority or a direct reproduction of the paper.
 
-Following Section VI of the paper, quadratic forms $V(x) = x^T Q x$ were discretized on a grid of 9 points per mode ($-2:0.5:2$), representing $9^{20} \approx 1.21 \times 10^{19}$ potential values.
+Quadratic forms $V(x) = x^T Q x$ were discretized on a grid of 9 points per mode ($-2:0.5:2$), representing $9^{20} \approx 1.21 \times 10^{19}$ potential values. Each trial used a new Q and a shared initial permutation for greedy and beam. The existing generator averages a full random block with its transpose; this does not match the paper's stated lower-triangle-then-mirror generation with variance-one entries.
 
-Each trial generated a symmetric block-diagonal matrix following Section VI ($Q_{ij} \sim \mathcal{N}(0, 1)$ below diagonal, then symmetrized with $10 \times 10$ blocks) under an independent random initial permutation. Both algorithms were evaluated using `teneva.cross` ($\delta = 10^{-4}$) and canonical Algorithm 2 matricization tie-breaking:
+Teneva TT-cross selected each ordering ($\delta=10^{-4}$). The final ordering's exact ranks were independently recomputed from Q using $r_k=\operatorname{rank}(Q_{\pi(1:k),\pi(k+1:N)})+2$. This corrects one beam outlier from reported rank 11 to exact rank 12. The varying-Q result file does not contain held-out accuracy measurements.
 
-| Maximum Bond Dimension ($r_{\max}$) | Published Table I (1,000 trials, MATLAB)* | Python Greedy Baseline (100 trials, `teneva`) | Our Beam Search ($K=2$) (100 trials, `teneva`) |
+| Exact Maximum Bond Dimension | Published Table I (1,000 trials, MATLAB)* | Greedy (100 paired varying-Q trials, `teneva`) | Beam Search ($K=2$, same trials) |
 | :---: | :---: | :---: | :---: |
-| **Rank 7 (Optimal)** | **2 (0.2%)** | **74 (74.0%)** | **82 (82.0%)** |
-| **Rank 8** | 223 (22.3%) | 17 (17.0%) | 13 (13.0%) |
-| **Rank 9** | 749 (74.9%) | 9 (9.0%) | 4 (4.0%) |
-| **Rank 10** | 26 (2.6%) | 0 (0.0%) | 0 (0.0%) |
-| **Rank 11** | 0 (0.0%) | 0 (0.0%) | **1 (1.0%)** |
-| **Optimal Hit Rate ($r=7$)** | **0.2%** | **74.0%** | **82.0%** *(+8.0% absolute)* |
-| **Severe Degradation ($r \ge 9$)** | **77.5%** | **9.0%** | **5.0%** *(reduced by ~45%)* |
-| **Average Parameters** | **5,673.9** | **4,235.9** $\pm$ 615.1 | **4,150.6** $\pm$ 669.0 *(saving 85.3 params)* |
-| **Held-out Relative Error** | — | **$5.65 \times 10^{-15}$** | **$6.99 \times 10^{-15}$** |
-| **Average Time per Trial** | — | **217.1 s** (~3.6 min) | **398.1 s** (~6.6 min) |
+| Rank 7 | 2 (0.2%) | 74 (74.0%) | 82 (82.0%) |
+| Rank 8 | 223 (22.3%) | 17 (17.0%) | 13 (13.0%) |
+| Rank 9 | 749 (74.9%) | 9 (9.0%) | 4 (4.0%) |
+| Rank 10 | 26 (2.6%) | 0 | 0 |
+| Rank 11 | 0 | 0 | 0 |
+| Rank 12 | — | 0 | 1 (1.0%) |
+| Mean maximum rank | — | 7.35 | 7.26 |
+| Mean exact parameters | 5,673.9* | 4,237.2 | 4,165.2 |
+| Paired rank outcomes | — | — | 13 wins / 84 ties / 3 losses |
+| Mean parameter difference (beam - greedy) | — | — | -72 (-1.7%); 95% CI [-236, 92] |
 
-*\*Note: The paper's Table I is included for reference of published results. It used MATLAB's 2013 `tt-toolbox` across 1,000 permutations of a single problem instance. Our experiment uses Python `teneva` across 100 independently generated matrices and permutations.*
+*\*The paper's reported Table I average and the Python results are not directly comparable: the paper does not publish its Q matrix or seeds, uses MATLAB TT-Toolbox, and our varying-Q generator differs from its stated entry-generation procedure. The 100-trial Python result uses independently generated Q matrices, not one fixed problem instance.*
 
-#### Detailed Head-to-Head Analysis (100 Shared Permutations)
-- **Beam Search Strictly Superior**: **13 trials**  
-  In Trials `[3, 7, 12, 13, 16, 24, 26, 47, 53, 63, 71, 80, 96]`, Beam Search recovered rank 7 while Greedy was trapped at rank 8 or 9 (or rank 8 instead of 9).
-- **Tied**: **84 trials** (both achieved identical maximum bond dimension).
-- **Greedy Superior (Regressions)**: **3 trials**  
-  In Trials `[0, 2, 59]`, Greedy achieved a lower maximum bond dimension than Beam Search.
-- **Outlier**: In Trial 0, Beam Search produced an $r_{\max} = 11$ ordering due to an early sub-optimal pruning step, whereas Greedy's worst outcome was rank 9.
-- **Fidelity Verification**: Relative Frobenius error on 1,000 unseen held-out test points confirms machine-precision reconstruction ($\sim 10^{-15}$), verifying that rank compression introduces zero loss of functional accuracy.
-- Raw trial data: [`experiments/results/table1_100trials_reproduction.json`](experiments/results/table1_100trials_reproduction.json).
+See [PRESENTATION_RESULTS_FAQ.md](./PRESENTATION_RESULTS_FAQ.md) for all saved benchmark comparisons, confidence intervals, limitations, and presentation Q&A.
+
+### TT-Cross Package Comparison
+
+The N=8 black-box benchmark can run the same greedy and beam-search trials with either Teneva or TTpy. Both runs use the same seed and generated starting permutations; each package uses its own cross implementation, so runtime and approximation ranks are package-level results rather than a claim of identical internal algorithms. The aggregate output includes maximum-bond counts, optimal-hit rates, parameter counts, and runtime, with TTpy-minus-Teneva deltas.
+
+The TTpy dependency is pinned to the upstream pure-Python implementation. This avoids PyPI's older `ttpy` 1.x source distribution, whose API differs from the current TTpy package.
+
+```bash
+python experiments/run_tt_package_comparison.py --trials 5 --beam-width 3
+```
+
+Increase `--trials` for a more stable comparison. Results are written to `experiments/results/tt_package_comparison.json`; separate backend results are also saved as `ttcross_benchmark_results.json` and `ttcross_ttpy_benchmark_results.json`.
+
+The checked-in five-trial run used $N=8$, beam width 3, tolerance $10^{-6}$, and seed 42. Both backends selected the same ranks and parameter counts on these trials; TTpy was faster in this run:
+
+| Backend | Greedy max bond / params | Greedy sec/trial | Beam max bond / params | Beam sec/trial |
+| :--- | :---: | :---: | :---: | :---: |
+| Teneva 0.14.11 | 5 / 846 | 2.735 | 4 / 594 | 6.077 |
+| TTpy 2.0.0rc3 | 5 / 846 | 1.063 | 4 / 594 | 2.494 |
+
+TTpy's average runtime was 61.1% lower for greedy and 59.0% lower for beam search on this machine. These are small-sample, hardware-dependent measurements, not general performance guarantees. Raw outputs: [`tt_package_comparison.json`](experiments/results/tt_package_comparison.json), [`ttcross_ttpy_benchmark_results.json`](experiments/results/ttcross_ttpy_benchmark_results.json).
+
+#### Varying-Q Benchmark Paired Outcomes
+- **Beam lower exact maximum rank** in 13 trials, tied in 84, and higher in 3. The exact-rank win trials are `[3, 7, 12, 13, 16, 24, 26, 47, 53, 63, 71, 80, 96]`; the losses are `[0, 2, 59]`.
+- **Paired sign test** on the 16 non-tied trials: $p=0.021$. This is evidence for this benchmark sample, not proof of universal superiority.
+- **Validation limitation**: this varying-Q result file does not record held-out errors. Do not attribute the fixed-Q Teneva held-out errors shown elsewhere to these 100 trials.
+- Raw trial data: [table1_100trials_reproduction.json](./experiments/results/table1_100trials_reproduction.json); exact-rank audit and presentation guidance: [PRESENTATION_RESULTS_FAQ.md](./PRESENTATION_RESULTS_FAQ.md).
 
 ---
 
@@ -170,12 +193,15 @@ TT_decomposition/
 │   ├── run_analytical_oracle_study.py # 1000-trial analytical rank oracle study (N=20)
 │   ├── run_benchmarks.py              # 50-trial full-tensor dense benchmark (N=8)
 │   ├── run_ttcross_benchmark.py       # Functional black-box TT-cross benchmark (N=8)
+│   ├── run_tt_package_comparison.py   # Paired Teneva vs TTpy TT-cross benchmark
 │   └── results/
 │       ├── table1_100trials_reproduction.json # Committed raw trial data for N=20 benchmark
 │       ├── analytical_oracle_results.json     # Committed raw results for N=20 oracle study
 │       ├── benchmark_results.json             # Committed raw results for N=8 dense benchmark
-│       └── ttcross_benchmark_results.json     # Committed raw results for N=8 cross benchmark
-├── requirements.txt          # Dependencies (numpy, scipy, teneva)
+│       ├── ttcross_benchmark_results.json     # N=8 Teneva TT-cross results
+│       ├── ttcross_ttpy_benchmark_results.json # N=8 TTpy TT-cross results
+│       └── tt_package_comparison.json          # Paired package comparison and deltas
+├── requirements.txt          # Dependencies (numpy, scipy, teneva, TTpy)
 ├── EXPLANATION_AND_DEFENSE_GUIDE.md  # Comprehensive project report and viva defense guide
 └── README.md
 ```
@@ -196,7 +222,13 @@ Executes 6 unit tests validating exact reconstruction, TT-rounding fidelity, Alg
 python tests/test_correctness.py
 ```
 
-### 6.3 Run TT-Cross Benchmark ($N=20$ Modes, Checkpointed)
+### 6.3 Run Paired Teneva/TTpy TT-Cross Comparison ($N=8$)
+Runs the same random permutations with both cross backends, comparing greedy and beam search:
+```bash
+python experiments/run_tt_package_comparison.py --trials 5 --beam-width 3
+```
+
+### 6.4 Run TT-Cross Benchmark ($N=20$ Modes, Checkpointed)
 Executes the parallel black-box TT-cross benchmark with held-out test evaluation:
 ```bash
 # Run 20-trial pilot benchmark
@@ -206,13 +238,25 @@ python experiments/run_table1_reproduction.py --trials 20 --workers 10
 python experiments/run_table1_reproduction.py --trials 100 --workers 10
 ```
 
-### 6.4 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
+### 6.5 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
 Evaluates algebraic permutation ranks across 1,000 trials:
 ```bash
 python experiments/run_analytical_oracle_study.py
 ```
 
-### 6.5 Run Dense Full-Tensor Benchmark ($N=8$, 50 Trials)
+### 6.6 Run Fixed-Q TTpy DMRG-Cross Benchmark ($N=20$)
+Runs paired greedy and beam searches with TTpy `dmrg_cross` on the same fixed
+matrix and permutations. Every candidate TT is rounded and checked on 1,000
+held-out points; deterministic seed, pivoting, and fixed-rank retries are used
+when a candidate is non-finite or inaccurate. The run records TTpy version,
+accepted settings, retries, and validation errors. The pre-existing unvalidated
+result file is intentionally not reused:
+```bash
+python experiments/run_ttpy_dmrg_table1.py --trials 100 --workers 10 \
+  --output experiments/results/table1_100trials_ttpy_dmrg_cross_validated.json
+```
+
+### 6.7 Run Dense Full-Tensor Benchmark ($N=8$, 50 Trials)
 Runs the dense TT-SVD benchmark comparing Greedy vs. Beam Search across beam widths $K \in \{1, 2, 3, 5\}$:
 ```bash
 python experiments/run_benchmarks.py

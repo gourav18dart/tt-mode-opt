@@ -7,6 +7,7 @@ TT-Cross Beam Search (Our Novelty) on black-box functional tensors.
 import sys
 import time
 import json
+from importlib.metadata import version
 from pathlib import Path
 from collections import Counter
 import numpy as np
@@ -20,7 +21,10 @@ from src.algorithms import tt_cross_opt, tt_cross_beam_search
 from src.tt_core import tt_num_params
 
 
-def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
+def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42, backend="teneva"):
+    if backend not in ("teneva", "ttpy"):
+        raise ValueError(f"Unsupported TT-cross backend: {backend!r}")
+
     rng = np.random.RandomState(seed)
     grid = np.arange(-2, 2.01, 0.5)  # 9 points
     shape = [len(grid)] * N
@@ -32,12 +36,14 @@ def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
         
     print(f"\n{'='*70}")
     print(f"TT-CROSS BENCHMARK: Block-Diagonal Q ({N//2}+{N//2}={N} modes)")
-    print(f"Trials: {n_trials}, Beam Width: {beam_width}, Tol: {tol}")
+    print(f"Trials: {n_trials}, Beam Width: {beam_width}, Tol: {tol}, Backend: {backend}")
     print(f"{'='*70}")
     
     # Natural order baseline
     nat_order = list(range(N))
-    _, nat_bonds, _ = tt_cross_opt(f_coords, N, grid, initial_perm=nat_order, tol=tol, seed=seed)
+    _, nat_bonds, _ = tt_cross_opt(
+        f_coords, N, grid, initial_perm=nat_order, tol=tol, seed=seed, backend=backend
+    )
     nat_max = max(nat_bonds)
     nat_params = tt_num_params(nat_bonds, shape)
     print(f"Natural Ordering: bonds={nat_bonds}, max={nat_max}, params={nat_params}")
@@ -56,7 +62,9 @@ def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
     for idx, perm in enumerate(permutations):
         # 1. Algorithm 4 (Paper's Greedy TT-Cross)
         t0 = time.time()
-        ord_4, bonds_4, _ = tt_cross_opt(f_coords, N, grid, initial_perm=perm, tol=tol, seed=seed)
+        ord_4, bonds_4, _ = tt_cross_opt(
+            f_coords, N, grid, initial_perm=perm, tol=tol, seed=seed, backend=backend
+        )
         t_4 = time.time() - t0
         algo4_max_bonds.append(max(bonds_4))
         algo4_params.append(tt_num_params(bonds_4, shape))
@@ -64,7 +72,16 @@ def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
         
         # 2. TT-Cross Beam Search (Our Novelty)
         t0 = time.time()
-        ord_b, bonds_b, _ = tt_cross_beam_search(f_coords, N, grid, initial_perm=perm, beam_width=beam_width, tol=tol, seed=seed)
+        ord_b, bonds_b, _ = tt_cross_beam_search(
+            f_coords,
+            N,
+            grid,
+            initial_perm=perm,
+            beam_width=beam_width,
+            tol=tol,
+            seed=seed,
+            backend=backend,
+        )
         t_b = time.time() - t0
         beam_max_bonds.append(max(bonds_b))
         beam_params.append(tt_num_params(bonds_b, shape))
@@ -73,6 +90,8 @@ def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
         print(f"  Trial {idx+1}/{n_trials}: Algo4 max={max(bonds_4)} ({t_4:.2f}s) | Beam max={max(bonds_b)} ({t_b:.2f}s)")
         
     res = {
+        "backend": backend,
+        "backend_version": version(backend),
         "N": N,
         "n_trials": n_trials,
         "natural_max": nat_max,
@@ -97,7 +116,12 @@ def run_ttcross_experiment(N=8, n_trials=20, beam_width=3, tol=1e-6, seed=42):
     
     out_dir = Path(__file__).resolve().parent / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / "ttcross_benchmark_results.json"
+    out_name = (
+        "ttcross_benchmark_results.json"
+        if backend == "teneva"
+        else f"ttcross_{backend}_benchmark_results.json"
+    )
+    out_file = out_dir / out_name
     
     def convert_for_json(obj):
         if isinstance(obj, (np.integer, np.int64, np.int32)):
