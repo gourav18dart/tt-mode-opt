@@ -157,6 +157,46 @@ class TestTensorTrain(unittest.TestCase):
         self.assertEqual(ord_alg4, ord_beam1, f"K=1 order {ord_beam1} does not match Alg 4 order {ord_alg4}")
         self.assertEqual(bonds_alg4, bonds_beam1, f"K=1 bonds {bonds_beam1} do not match Alg 4 bonds {bonds_alg4}")
 
+    def test_ttpy_cross_beam_width_one_matches_greedy(self):
+        """Check that the TTpy backend supports both wrappers and preserves K=1."""
+        from src.algorithms import tt_cross_opt, tt_cross_beam_search
+
+        N = 4
+        Q = create_block_diagonal_Q(N, [2, 2], seed=27)
+        grid = np.array([-1.0, 0.0, 1.0])
+
+        def f_coords(X):
+            return np.einsum("si,ij,sj->s", X, Q, X)
+
+        initial_perm = [2, 0, 3, 1]
+        tensor = build_quadratic_tensor(Q, grid)
+        order_greedy, bonds_greedy, cores_greedy = tt_cross_opt(
+            f_coords,
+            N,
+            grid,
+            initial_perm=initial_perm,
+            tol=1e-6,
+            seed=11,
+            backend="ttpy",
+        )
+        order_beam, bonds_beam, cores_beam = tt_cross_beam_search(
+            f_coords,
+            N,
+            grid,
+            initial_perm=initial_perm,
+            beam_width=1,
+            tol=1e-6,
+            seed=11,
+            backend="ttpy",
+        )
+
+        self.assertEqual(order_greedy, order_beam)
+        self.assertEqual(bonds_greedy, bonds_beam)
+        self.assertEqual(len(bonds_beam), N - 1)
+        self.assertTrue(all(rank >= 1 for rank in bonds_beam))
+        self.assertLess(tt_rel_error(tensor, cores_greedy, order=order_greedy), 1e-5)
+        self.assertLess(tt_rel_error(tensor, cores_beam, order=order_beam), 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

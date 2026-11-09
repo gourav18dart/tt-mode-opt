@@ -243,7 +243,7 @@ def get_canonical_bond_values(cores):
     return vals
 
 
-def _get_cross_tt(f_multi_index, shape, tol=1e-6, seed=123, nswp=5):
+def _get_cross_tt(f_multi_index, shape, tol=1e-6, seed=123, nswp=5, backend="teneva"):
     """
     Internal helper to construct TT cores via cross-approximation and rank truncation.
     Returns:
@@ -251,16 +251,42 @@ def _get_cross_tt(f_multi_index, shape, tol=1e-6, seed=123, nswp=5):
         ranks (list of int): Bond dimensions [r_1, ..., r_{N-1}].
         vals (list of float): Canonical, gauge-invariant cut singular values (Algorithm 2).
     """
-    import teneva
-    Y0 = teneva.rand(shape, r=2, seed=seed)
-    Y = teneva.cross(f_multi_index, Y0, e=tol, nswp=nswp)
-    Y_tr = teneva.truncate(Y, e=tol)
-    ranks = [int(r) for r in teneva.ranks(Y_tr)[1:-1]]
-    vals = get_canonical_bond_values(Y_tr)
-    return Y_tr, ranks, vals
+    if backend == "teneva":
+        import teneva
+
+        Y0 = teneva.rand(shape, r=2, seed=seed)
+        Y = teneva.cross(f_multi_index, Y0, e=tol, nswp=nswp)
+        Y_tr = teneva.truncate(Y, e=tol)
+        cores = Y_tr
+        ranks = [int(r) for r in teneva.ranks(Y_tr)[1:-1]]
+    elif backend == "ttpy":
+        import tt
+
+        rng = np.random.RandomState(seed)
+        initial_ranks = [1] + [2] * (len(shape) - 1) + [1]
+        initial_cores = [
+            rng.standard_normal((initial_ranks[i], mode_size, initial_ranks[i + 1]))
+            for i, mode_size in enumerate(shape)
+        ]
+        Y0 = tt.vector.from_list(initial_cores)
+        Y = tt.rect_cross(
+            f_multi_index,
+            Y0,
+            eps=tol,
+            nswp=nswp,
+            kickrank=1,
+            verbose=False,
+        )
+        cores = [np.asarray(core) for core in tt.vector.to_list(Y)]
+        ranks = [int(r) for r in Y.r[1:-1]]
+    else:
+        raise ValueError(f"Unsupported TT-cross backend: {backend!r}")
+
+    vals = get_canonical_bond_values(cores)
+    return cores, ranks, vals
 
 
-def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
+def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123, backend="teneva"):
     """
     Algorithm 4: Optimized TT-Cross Decomposition (Faithful implementation).
     Follows Algorithm 4 from Tichavsky & Straka (2025), including bond-value tie-breaking.
@@ -272,6 +298,7 @@ def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
         initial_perm (list of int, optional): Starting permutation.
         tol (float): Truncation tolerance.
         seed (int): Seed for TT-cross initialization.
+        backend (str): Cross-approximation package: "teneva" or "ttpy".
         
     Returns:
         best_order (list of int): Optimized mode ordering.
@@ -289,7 +316,7 @@ def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
             return f_coords(X)
         return f_multi_index
         
-    F, r, v = _get_cross_tt(make_evaluator(order), shape, tol=tol, seed=seed)
+    F, r, v = _get_cross_tt(make_evaluator(order), shape, tol=tol, seed=seed, backend=backend)
     
     for i in range(N - 1):
         r_i = r[i]
@@ -299,7 +326,9 @@ def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
             # Cyclic shift of remaining modes as in line 8 of Algorithm 4:
             # orda = [orda(1:i-1), orda(i+1:d), orda(i)]
             cand_ord = orda[:i] + orda[i+1:] + [orda[i]]
-            Fa, ra, va = _get_cross_tt(make_evaluator(cand_ord), shape, tol=tol, seed=seed)
+            Fa, ra, va = _get_cross_tt(
+                make_evaluator(cand_ord), shape, tol=tol, seed=seed, backend=backend
+            )
             # Line 11: if ra(i) < r_i or (ra(i) == r_i and va(i) < v_i)
             if ra[i] < r_i or (ra[i] == r_i and va[i] < v_i):
                 r_i = ra[i]
@@ -314,7 +343,9 @@ def tt_cross_opt(f_coords, N, grid, initial_perm=None, tol=1e-6, seed=123):
     return order, final_bonds, F
 
 
-def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol=1e-6, seed=123):
+def tt_cross_beam_search(
+    f_coords, N, grid, initial_perm=None, beam_width=3, tol=1e-6, seed=123, backend="teneva"
+):
     """
     Beam Search Mode Ordering for TT-Cross Decomposition.
     Generalizes Algorithm 4 (ttcrossopt):
@@ -323,6 +354,9 @@ def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol
     
     Evaluates candidate permutations using black-box TT-cross approximation and ranks
     hypotheses by (max_rank_so_far, sum_rank_so_far, current_rank, current_canonical_bond_val).
+
+    The cross approximation backend can be selected with ``backend="teneva"`` or
+    ``backend="ttpy"``.
     """
     shape = [len(grid)] * N
     init_ord = list(range(N)) if initial_perm is None else list(initial_perm)
@@ -335,7 +369,9 @@ def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol
             return f_coords(X)
         return f_multi_index
         
-    F0, r0, v0 = _get_cross_tt(make_evaluator(init_ord), shape, tol=tol, seed=seed)
+    F0, r0, v0 = _get_cross_tt(
+        make_evaluator(init_ord), shape, tol=tol, seed=seed, backend=backend
+    )
     beam = [(list(init_ord), r0, v0, F0)]
     
     for i in range(N - 1):
@@ -345,7 +381,9 @@ def tt_cross_beam_search(f_coords, N, grid, initial_perm=None, beam_width=3, tol
             # Evaluate all cyclic shifts as in line 8 of Algorithm 4
             for j in range(1, N - i + 1):
                 cand_ord = orda[:i] + orda[i+1:] + [orda[i]]
-                Fa, ra, va = _get_cross_tt(make_evaluator(cand_ord), shape, tol=tol, seed=seed)
+                Fa, ra, va = _get_cross_tt(
+                    make_evaluator(cand_ord), shape, tol=tol, seed=seed, backend=backend
+                )
                 if beam_width == 1:
                     cost = (ra[i], va[i])
                 else:

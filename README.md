@@ -105,6 +105,27 @@ Each trial generated a symmetric block-diagonal matrix following Section VI ($Q_
 
 *\*Note: The paper's Table I is included for reference of published results. It used MATLAB's 2013 `tt-toolbox` across 1,000 permutations of a single problem instance. Our experiment uses Python `teneva` across 100 independently generated matrices and permutations.*
 
+### TT-Cross Package Comparison
+
+The N=8 black-box benchmark can run the same greedy and beam-search trials with either Teneva or TTpy. Both runs use the same seed and generated starting permutations; each package uses its own cross implementation, so runtime and approximation ranks are package-level results rather than a claim of identical internal algorithms. The aggregate output includes maximum-bond counts, optimal-hit rates, parameter counts, and runtime, with TTpy-minus-Teneva deltas.
+
+The TTpy dependency is pinned to the upstream pure-Python implementation. This avoids PyPI's older `ttpy` 1.x source distribution, whose API differs from the current TTpy package.
+
+```bash
+python experiments/run_tt_package_comparison.py --trials 5 --beam-width 3
+```
+
+Increase `--trials` for a more stable comparison. Results are written to `experiments/results/tt_package_comparison.json`; separate backend results are also saved as `ttcross_benchmark_results.json` and `ttcross_ttpy_benchmark_results.json`.
+
+The checked-in five-trial run used $N=8$, beam width 3, tolerance $10^{-6}$, and seed 42. Both backends selected the same ranks and parameter counts on these trials; TTpy was faster in this run:
+
+| Backend | Greedy max bond / params | Greedy sec/trial | Beam max bond / params | Beam sec/trial |
+| :--- | :---: | :---: | :---: | :---: |
+| Teneva 0.14.11 | 5 / 846 | 2.735 | 4 / 594 | 6.077 |
+| TTpy 2.0.0rc3 | 5 / 846 | 1.063 | 4 / 594 | 2.494 |
+
+TTpy's average runtime was 61.1% lower for greedy and 59.0% lower for beam search on this machine. These are small-sample, hardware-dependent measurements, not general performance guarantees. Raw outputs: [`tt_package_comparison.json`](experiments/results/tt_package_comparison.json), [`ttcross_ttpy_benchmark_results.json`](experiments/results/ttcross_ttpy_benchmark_results.json).
+
 #### Detailed Head-to-Head Analysis (100 Shared Permutations)
 - **Beam Search Strictly Superior**: **13 trials**  
   In Trials `[3, 7, 12, 13, 16, 24, 26, 47, 53, 63, 71, 80, 96]`, Beam Search recovered rank 7 while Greedy was trapped at rank 8 or 9 (or rank 8 instead of 9).
@@ -170,12 +191,15 @@ TT_decomposition/
 │   ├── run_analytical_oracle_study.py # 1000-trial analytical rank oracle study (N=20)
 │   ├── run_benchmarks.py              # 50-trial full-tensor dense benchmark (N=8)
 │   ├── run_ttcross_benchmark.py       # Functional black-box TT-cross benchmark (N=8)
+│   ├── run_tt_package_comparison.py   # Paired Teneva vs TTpy TT-cross benchmark
 │   └── results/
 │       ├── table1_100trials_reproduction.json # Committed raw trial data for N=20 benchmark
 │       ├── analytical_oracle_results.json     # Committed raw results for N=20 oracle study
 │       ├── benchmark_results.json             # Committed raw results for N=8 dense benchmark
-│       └── ttcross_benchmark_results.json     # Committed raw results for N=8 cross benchmark
-├── requirements.txt          # Dependencies (numpy, scipy, teneva)
+│       ├── ttcross_benchmark_results.json     # N=8 Teneva TT-cross results
+│       ├── ttcross_ttpy_benchmark_results.json # N=8 TTpy TT-cross results
+│       └── tt_package_comparison.json          # Paired package comparison and deltas
+├── requirements.txt          # Dependencies (numpy, scipy, teneva, TTpy)
 ├── EXPLANATION_AND_DEFENSE_GUIDE.md  # Comprehensive project report and viva defense guide
 └── README.md
 ```
@@ -196,7 +220,13 @@ Executes 6 unit tests validating exact reconstruction, TT-rounding fidelity, Alg
 python tests/test_correctness.py
 ```
 
-### 6.3 Run TT-Cross Benchmark ($N=20$ Modes, Checkpointed)
+### 6.3 Run Paired Teneva/TTpy TT-Cross Comparison ($N=8$)
+Runs the same random permutations with both cross backends, comparing greedy and beam search:
+```bash
+python experiments/run_tt_package_comparison.py --trials 5 --beam-width 3
+```
+
+### 6.4 Run TT-Cross Benchmark ($N=20$ Modes, Checkpointed)
 Executes the parallel black-box TT-cross benchmark with held-out test evaluation:
 ```bash
 # Run 20-trial pilot benchmark
@@ -206,13 +236,13 @@ python experiments/run_table1_reproduction.py --trials 20 --workers 10
 python experiments/run_table1_reproduction.py --trials 100 --workers 10
 ```
 
-### 6.4 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
+### 6.5 Run Analytical Oracle Study ($N=20$, 1,000 Trials)
 Evaluates algebraic permutation ranks across 1,000 trials:
 ```bash
 python experiments/run_analytical_oracle_study.py
 ```
 
-### 6.5 Run Dense Full-Tensor Benchmark ($N=8$, 50 Trials)
+### 6.6 Run Dense Full-Tensor Benchmark ($N=8$, 50 Trials)
 Runs the dense TT-SVD benchmark comparing Greedy vs. Beam Search across beam widths $K \in \{1, 2, 3, 5\}$:
 ```bash
 python experiments/run_benchmarks.py
